@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -31,6 +32,9 @@ public class User implements Serializable, UserDetails {
 	private String name;
 	private String password;
 	private String email;
+	@Column(name = "verification_code", length = 64)
+	private String verificationCode;
+	private boolean enabled;
 	
 	@ManyToMany(fetch = FetchType.EAGER)
 	@JoinTable(name = "tb_user_role",
@@ -41,12 +45,14 @@ public class User implements Serializable, UserDetails {
 	public User() {
 	}
 
-	public User(Long id, String name, String password, String email, Set<Role> roles) {
+	public User(Long id, String name, String password, String email, Set<Role> roles, String verificationCode, boolean enabled) {
 		this.id = id;
 		this.name = name;
 		this.password = password;
 		this.email = email;
 		this.roles = roles;
+		this.verificationCode = verificationCode;
+		this.enabled = enabled;
 	}
 
 	public Long getId() {
@@ -83,6 +89,22 @@ public class User implements Serializable, UserDetails {
 
 	public Set<Role> getRoles() {
 		return roles;
+	}
+
+	public String getVerificationCode() {
+		return verificationCode;
+	}
+
+	public void setVerificationCode(String verificationCode) {
+		this.verificationCode = verificationCode;
+	}
+	
+	public boolean enabled() {
+		return this.enabled;
+	}
+
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
 	}
 
 	@Override
@@ -137,6 +159,6 @@ public class User implements Serializable, UserDetails {
 
 	@Override
 	public boolean isEnabled() {
-		return true;
+		return this.enabled();
 	}
 }

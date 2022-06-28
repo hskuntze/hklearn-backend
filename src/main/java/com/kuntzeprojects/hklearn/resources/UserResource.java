@@ -1,10 +1,15 @@
 package com.kuntzeprojects.hklearn.resources;
 
+import java.io.IOException;
 import java.net.URI;
+
+import javax.mail.MessagingException;
+import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,9 +45,18 @@ public class UserResource {
 		return ResponseEntity.ok().body(obj);
 	}
 	
+	@GetMapping(value= "/verify")
+	public ResponseEntity<String> verifyUser(@Param("code") String code){
+		if(service.verify(code)) {
+			return ResponseEntity.ok().body("verify_success");
+		} else {
+			return ResponseEntity.ok().body("verify_fail");
+		}
+	}
+	
 	@PostMapping
-	public ResponseEntity<UserDTO> insert(@RequestBody UserInsertDTO obj){
-		UserDTO user = service.insert(obj);
+	public ResponseEntity<UserDTO> insert(@RequestBody UserInsertDTO obj, HttpServletRequest request) throws MessagingException, IOException{
+		UserDTO user = service.insert(obj, getURL(request));
 		URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
 				.path("/{id}")
 				.buildAndExpand(user.getId())
@@ -60,5 +74,10 @@ public class UserResource {
 	public ResponseEntity<UserDTO> delete(@PathVariable Long id){
 		service.delete(id);
 		return ResponseEntity.noContent().build();
+	}
+	
+	private String getURL(HttpServletRequest request) {
+		String siteURL = request.getRequestURL().toString();
+		return siteURL.replace(request.getServletPath(), "");
 	}
 }

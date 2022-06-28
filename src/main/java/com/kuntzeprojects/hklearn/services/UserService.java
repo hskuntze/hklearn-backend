@@ -1,7 +1,9 @@
 package com.kuntzeprojects.hklearn.services;
 
+import java.io.IOException;
 import java.util.Optional;
 
+import javax.mail.MessagingException;
 import javax.persistence.EntityNotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +11,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -27,6 +31,8 @@ import com.kuntzeprojects.hklearn.repositories.UserRepository;
 import com.kuntzeprojects.hklearn.services.exceptions.DatabaseException;
 import com.kuntzeprojects.hklearn.services.exceptions.ResourceNotFoundException;
 
+import net.bytebuddy.utility.RandomString;
+
 @Service
 public class UserService implements UserDetailsService{
 	
@@ -38,6 +44,9 @@ public class UserService implements UserDetailsService{
 	
 	@Autowired
 	private RoleRepository roleRepository;
+	
+	@Autowired
+	private JavaMailSender mailSender;
 	
 	@Transactional(readOnly = true)
 	public Page<UserDTO> findAllPaged(Pageable pageable){
@@ -53,11 +62,18 @@ public class UserService implements UserDetailsService{
 	}
 	
 	@Transactional
-	public UserDTO insert(UserInsertDTO obj) {
+	public UserDTO insert(UserInsertDTO obj, String siteURL) throws MessagingException, IOException{
 		User user = new User();
 		dtoToEntity(obj, user);
 		user.setPassword(encoder.encode(obj.getPassword()));
+		
+		String random = RandomString.make(64);
+		System.out.println("AAAAQUIII ==>>  "+random);
+		user.setVerificationCode(random);
+		user.setEnabled(false);
+		
 		user = repository.save(user);
+		sendVerificationEmail(user, siteURL);
 		return new UserDTO(user);
 	}
 	
@@ -102,5 +118,41 @@ public class UserService implements UserDetailsService{
 		}
 		
 		return user;
+	}
+	
+	public boolean verify(String verificationCode) {
+		User user = repository.findByVerificationCode(verificationCode);
+		
+		if(user == null || user.isEnabled()) {
+			return false;
+		} else {
+			user.setVerificationCode(null);
+			user.setEnabled(true);
+			repository.save(user);
+			
+			return true;
+		}
+	}
+	
+	private void sendVerificationEmail(User user, String siteURL) throws MessagingException, IOException {
+		String toAddress = user.getEmail();
+		String fromAddress = "hskuntze@gmail.com";
+		String subject = "Verify your account";
+		String content = "Olá, [[name]],<br>" +
+						"Verifique sua conta clicando no link abaixo:<br>" +
+						"<h5><a href=\"[[URL]]\"></a></h5>";
+		
+		content = content.replace("[[name]]", user.getName());
+		String verifyUrl = siteURL + "/verify?code=" + user.getVerificationCode();
+		
+		content = content.replace("[[URL]]", verifyUrl);
+		
+		SimpleMailMessage message = new SimpleMailMessage();
+		message.setFrom(fromAddress);
+		message.setSubject(subject);
+		message.setTo(toAddress);
+		message.setText(content);
+		
+		mailSender.send(message);
 	}
 }
