@@ -68,7 +68,6 @@ public class UserService implements UserDetailsService{
 		user.setPassword(encoder.encode(obj.getPassword()));
 		
 		String random = RandomString.make(64);
-		System.out.println("AAAAQUIII ==>>  "+random);
 		user.setVerificationCode(random);
 		user.setEnabled(false);
 		
@@ -138,12 +137,10 @@ public class UserService implements UserDetailsService{
 		String toAddress = user.getEmail();
 		String fromAddress = "hskuntze@gmail.com";
 		String subject = "Verify your account";
-		String content = "Olá, [[name]],<br>" +
-						"Verifique sua conta clicando no link abaixo:<br>" +
-						"<h5><a href=\"[[URL]]\"></a></h5>";
+		String content = "Olá, [[name]]. Verifique sua conta clicando no link [[URL]]";
 		
 		content = content.replace("[[name]]", user.getName());
-		String verifyUrl = siteURL + "/verify?code=" + user.getVerificationCode();
+		String verifyUrl = siteURL + "/users/verify?code=" + user.getVerificationCode();
 		
 		content = content.replace("[[URL]]", verifyUrl);
 		
